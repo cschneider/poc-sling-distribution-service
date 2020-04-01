@@ -227,7 +227,6 @@
                     </execution>
                 </executions>
             </plugin>
-                        <!-- 
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-resolver-maven-plugin</artifactId>
@@ -244,18 +243,6 @@
                         <configuration>
                             <bndruns>
                                 <bndrun>app.bndrun</bndrun>
-                            </bndruns>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>resolve-test</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>resolve</goal>
-                        </goals>
-                        <configuration>
-                            <bndruns>
-                                <bndrun>integration-test.bndrun</bndrun>
                             </bndruns>
                         </configuration>
                     </execution>
@@ -279,25 +266,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>biz.aQute.bnd</groupId>
-                <artifactId>bnd-testing-maven-plugin</artifactId>
-                <version>${bnd.version}</version>
-                <configuration>
-                    <bndruns>
-                        <bndrun>integration-test.bndrun</bndrun>
-                    </bndruns>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>testing</id>
-                        <goals>
-                            <goal>testing</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-             -->
         </plugins>
     </build>
 </project>
