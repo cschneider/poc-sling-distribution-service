@@ -59,4 +59,5 @@ index: target/index.xml;name="app"
 	com.fasterxml.jackson.jaxrs.jackson-jaxrs-base;version='[2.9.6,2.9.7)',\
 	com.fasterxml.jackson.jaxrs.jackson-jaxrs-json-provider;version='[2.9.6,2.9.7)',\
 	com.fasterxml.jackson.module.jackson-module-jaxb-annotations;version='[2.9.6,2.9.7)',\
-	org.apache.aries.jax.rs.jackson;version='[1.0.2,1.0.3)'
+	org.apache.aries.jax.rs.jackson;version='[1.0.2,1.0.3)',\
+	jakarta.xml.bind-api;version='[2.3.3,2.3.4)'
