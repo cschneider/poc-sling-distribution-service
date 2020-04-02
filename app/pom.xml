@@ -24,7 +24,7 @@
         </dependency>
         
         <!-- Our own bundles -->
-                <dependency>
+        <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.distribution.service.api</artifactId>
             <version>${project.version}</version>
@@ -34,7 +34,7 @@
             <artifactId>org.apache.sling.distribution.service.backend</artifactId>
             <version>${project.version}</version>
         </dependency>
-            
+
 
         <!-- Basic Felix bundles. This is more than we strictly need but 
             the resolver works with the runrequires in the bndrun file to make sure we 
@@ -96,8 +96,18 @@
             <version>1.1.2</version>
         </dependency>
 
-        <!-- <dependency> <groupId>org.apache.felix</groupId> <artifactId>org.apache.felix.gogo.jline</artifactId> 
-            <version>1.0.10</version> </dependency> -->
+        <!-- Missing apis from java 11 -->
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>2.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.xml.ws</groupId>
+            <artifactId>jakarta.xml.ws-api</artifactId>
+            <version>2.3.3</version>
+        </dependency>
+        
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr</artifactId>
@@ -181,7 +191,7 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.9</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.apache.aries.spifly</groupId>
             <artifactId>org.apache.aries.spifly.dynamic.bundle</artifactId>
