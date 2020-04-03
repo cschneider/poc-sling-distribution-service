@@ -3,10 +3,7 @@ package org.apache.sling.distribution.service.impl;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,7 +35,6 @@ import org.apache.sling.distribution.service.Environment;
 import org.apache.sling.distribution.service.PackageMessageMeta;
 import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
 import org.apache.sling.distribution.service.QueuePackages;
-import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.jaxrs.whiteboard.propertytypes.JaxrsResource;
 import org.slf4j.Logger;
@@ -145,34 +141,10 @@ public class QueuesResource {
     
     @POST
     @Path("{queueId}")
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(description = "Upload and distribute a content package")
-    public void postDistributionPackage(
-            @FormDataParam("pkgId") String pkgId,
-            @FormDataParam("reqType") ReqType reqType,
-            @FormDataParam("pkgType") String pkgType,
-            @FormDataParam("pubAgentName") String pubAgentName,
-            @FormDataParam("pubSlingId") String pubSlingId,
-            @FormDataParam("userId") String userId,
-            @FormDataParam("paths") List<String> paths,
-            @FormDataParam("deepPaths") List<String> deepPaths,
-            @FormDataParam("content-package") InputStream contentPackge 
-            ) throws IOException {
-        PackageMessageMeta pkgMeta = PackageMessageMeta.builder()
-            .pkgId(pkgId)
-            .reqType(reqType)
-            .pkgType(pkgType == null ? "durbo" : pkgType)
-            .pubAgentName(pubAgentName)
-            .pubSlingId(pubSlingId)
-            .userId(userId)
-            .paths(paths)
-            .deepPaths(deepPaths)
-            .build();
+    public void postDistributionPackage(PackageMessageMeta pkgMeta) throws IOException {
         System.out.println(pkgMeta);
-        java.nio.file.Path tmpFile = Files.createTempFile("upload", "zip");
-        System.out.println(tmpFile);
-        Files.copy(contentPackge, tmpFile, StandardCopyOption.REPLACE_EXISTING);
-        
     }
     
     @GET
