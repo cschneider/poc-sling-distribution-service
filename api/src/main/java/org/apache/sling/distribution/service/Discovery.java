@@ -24,10 +24,10 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
 
 @XmlRootElement
-@Value
+@Data
 @Builder
 public class Discovery {
     String subSlingId;               // Subscriber agent Sling identifier
@@ -36,7 +36,7 @@ public class Discovery {
     int maxRetries;   // The max number of retry attempts to process this package. A value smaller than zero indicates an infinite number of retry attempts. A value greater or equal to zero indicates a specific number of retry attempts.
     List<SubscriberState> subscriberState;
 
-    @Value
+    @Data
     @Builder
     public static class SubscriberState {
         String pubAgentName; // Publisher agent name

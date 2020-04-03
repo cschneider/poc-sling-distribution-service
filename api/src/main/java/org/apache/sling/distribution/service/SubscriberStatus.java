@@ -22,10 +22,10 @@ package org.apache.sling.distribution.service;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
 
 @XmlRootElement
-@Value
+@Data
 @Builder
 public class SubscriberStatus {
     String subSlingId;
