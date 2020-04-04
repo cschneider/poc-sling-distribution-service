@@ -13,7 +13,10 @@
         "tags" : ["systemready"]
     },
 
-
+    "org.apache.felix.metrics.PrometheusMetricsServlet~metricx": {
+        "servletPath" : "/metrics",
+        "tags" : ["metrics-tag"]
+    },
     "org.apache.aries.jax.rs.whiteboard.default": {
       "default.web": false
     }
