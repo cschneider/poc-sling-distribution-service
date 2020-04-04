@@ -21,11 +21,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.jaxrs.whiteboard.propertytypes.JaxrsResource;
-
-@Component(service = BinaryResource.class)
-@JaxrsResource
 @Path("binary")
 public class BinaryResource {
     @Context 
