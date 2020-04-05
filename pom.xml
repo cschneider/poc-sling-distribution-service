@@ -153,6 +153,7 @@
         </plugins>
     </build>
     <modules>
+        <module>metrics</module>
         <module>api</module>
         <module>backend</module>
         <module>app</module>

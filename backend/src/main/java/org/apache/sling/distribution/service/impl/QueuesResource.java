@@ -28,6 +28,7 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.felix.metrics.PrometheusMetricsRegistry;
 import org.apache.sling.distribution.service.DistributionEvent;
 import org.apache.sling.distribution.service.DistributionQueueInfo;
 import org.apache.sling.distribution.service.DistributionQueueInfo.DistributionQueueInfoBuilder;
@@ -35,7 +36,11 @@ import org.apache.sling.distribution.service.Environment;
 import org.apache.sling.distribution.service.PackageMessageMeta;
 import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
 import org.apache.sling.distribution.service.QueuePackages;
+
+import io.prometheus.client.Summary;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.jaxrs.whiteboard.propertytypes.JaxrsResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,25 +69,37 @@ public class QueuesResource {
     public QueuesResource() {
     }
     
+    @Reference
+    private PrometheusMetricsRegistry metricsRegistry;
+    private Summary requestLatency;
+
+    @Activate
+    protected void activate() {
+        requestLatency = metricsRegistry.summary(
+                "queues_latency",
+                "latency summary for queues request",
+                b -> b.quantile(0.5, 0.1)
+                      .quantile(.75, 0.1)
+        );
+    }
 
     @GET
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description =  "List available queues")
     public Environment getQueues() {
-        queueProd = createQueue("stage").build();
-        queueStage = createQueue("prod").build();
-        queues = new HashMap<String, DistributionQueueInfo>() {{
+        try (Summary.Timer ignore = requestLatency.startTimer()) {
+            queueProd = createQueue("stage").build();
+            queueStage = createQueue("prod").build();
+            queues = new HashMap<String, DistributionQueueInfo>() {{
                 put("stage", queueStage);
                 put("prod", queueProd);
-                }};
-        Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
-        Map<String, Link> links = new HashMap<String, Link>() {{
+            }};
+            Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
+            Map<String, Link> links = new HashMap<String, Link>() {{
                 put("self", selfLink);
-        }};
-        return Environment.builder()
-                    .queues(queues)
-                    .links(links)
-                    .build();
+            }};
+            return Environment.builder().queues(queues).links(links).build();
+        }
     }
     
     @GET
