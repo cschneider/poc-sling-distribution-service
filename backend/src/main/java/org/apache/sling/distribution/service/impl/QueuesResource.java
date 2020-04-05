@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -33,6 +35,12 @@ import org.apache.sling.distribution.service.Environment;
 import org.apache.sling.distribution.service.PackageMessageMeta;
 import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
 import org.apache.sling.distribution.service.QueuePackages;
+
+import org.eclipse.microprofile.metrics.Histogram;
+import org.eclipse.microprofile.metrics.MetricRegistry;
+import org.eclipse.microprofile.metrics.annotation.Counted;
+import org.eclipse.microprofile.metrics.annotation.Metered;
+import org.eclipse.microprofile.metrics.annotation.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +50,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 @Path("queues")
 public class QueuesResource {
     private static final String APPLICATION_HAL_JSON = "application/hal+json";
-    
+
     private Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Context 
@@ -54,19 +62,31 @@ public class QueuesResource {
 
     public QueuesResource() {
     }
-    
+
+//    @Inject
+//    public MetricRegistry registry;
+
+    @Inject
+    @Metric(name = "akrainiouk", absolute = true)
+    public Histogram histogram;
 
     @GET
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description =  "List available queues")
+    @Counted(name = "getQueues_count", absolute = true)
+    @Metered(name = "getQueues_meter", absolute = true)
     public Environment getQueues() {
+        histogram.update(System.currentTimeMillis());
         queueProd = createQueue("stage").build();
         queueStage = createQueue("prod").build();
-        queues = Map.of(
-                "stage", queueStage,
-                "prod", queueProd);
+        queues = new HashMap<String, DistributionQueueInfo>() {{
+                put("stage", queueStage);
+                put("prod", queueProd);
+                }};
         Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
-        Map<String, Link> links = Map.of("self", selfLink);
+        Map<String, Link> links = new HashMap<String, Link>() {{
+                put("self", selfLink);
+        }};
         return Environment.builder()
                     .queues(queues)
                     .links(links)
@@ -84,11 +104,12 @@ public class QueuesResource {
         Link packagesLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
         Link eventsLink = Link.fromUriBuilder(queueUri(queueId).path("events")).build();
 
-        Map<String, Link> links = Map.of(
-                "self", selfLink,
-                "packages", packagesLink,
-                "events", eventsLink,
-                "env", envLink);
+        Map<String, Link> links = new HashMap<String, Link>() {{
+                put("self", selfLink);
+                put("packages", packagesLink);
+                put("events", eventsLink);
+                put("env", envLink);
+                }};
         return createQueue(queueId).links(links).build();
     }
 
@@ -110,9 +131,10 @@ public class QueuesResource {
         Link messagesLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
         Link queueLink = Link.fromUriBuilder(queueUri(queueId)).build();
 
-        Map<String, Link> links = Map.of(
-                "self", messagesLink,
-                "queue", queueLink);
+        Map<String, Link> links = new HashMap<String, Link>() {{
+                put("self", messagesLink);
+                put("queue", queueLink);
+        }};
         return QueuePackages.builder().packages(packages).links(links).build();
     }
     
@@ -180,11 +202,14 @@ public class QueuesResource {
         Link binaryLink = Link.fromUriBuilder(queuePackgesUri(queueId).path(position + ".zip")).build();
         Link selfLink = Link.fromUriBuilder(queuePackgesUri(queueId).path("" + position)).build();
         Link queueLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
-        Map<String, Link> links = showQueueLink ? Map.of(
-                "self", selfLink,
-                "contentPackage", binaryLink,
-                "queue", queueLink)
-        : Map.of("self", selfLink, "binary", binaryLink);
+        Map<String, Link> links = showQueueLink ? new HashMap<String, Link>() {{
+                put("self", selfLink);
+                put("contentPackage", binaryLink);
+                put("queue", queueLink); }}
+        : new HashMap<String, Link>() {{
+                        put("self", selfLink);
+                        put("binary", binaryLink);
+        }};
         PackageMessageMeta package1 = PackageMessageMeta.builder()
                 .pkgId(pkgId)
                 .position(position)
@@ -213,6 +238,6 @@ public class QueuesResource {
         return DistributionQueueInfo.builder()
                 .id(queueId)
                 .size(20)
-                .links(Map.of("self", link));
+                .links(new HashMap<String, Link>() {{ put("self", link); }});
     }
 }
