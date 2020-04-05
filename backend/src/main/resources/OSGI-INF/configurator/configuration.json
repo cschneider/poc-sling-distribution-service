@@ -13,7 +13,7 @@
         "tags" : ["systemready"]
     },
 
-    "org.apache.felix.metrics.servlet.PrometheusMetricsServlet~metricx": {
+    "org.apache.felix.metrics.servlet.PrometheusMetricsServlet~metrics": {
         "servletPath" : "/metrics",
         "tags" : ["metrics-tag"]
     },
