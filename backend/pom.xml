@@ -1,6 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0"?>
+<project
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.sling</groupId>
@@ -8,19 +10,18 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>org.apache.sling.distribution.service.backend</artifactId>
-
     <dependencies>
-        <!-- our own dependencies -->
         <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.distribution.service.api</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
-        
+        <!-- Need older version for compatibility with sling commons metrics -->
+
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
-            <version>4.0.3</version>
+            <version>3.2.4</version>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
@@ -59,6 +60,11 @@
             <version>${swagger.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-jaxrs2</artifactId>
+            <version>${swagger.version}</version>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.6</version>
@@ -68,6 +74,10 @@
             <artifactId>commons-collections4</artifactId>
             <version>4.1</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>swagger-ui</artifactId>
+            <version>3.25.0</version>
+        </dependency>
     </dependencies>
 </project>

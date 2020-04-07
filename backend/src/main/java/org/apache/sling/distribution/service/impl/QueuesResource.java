@@ -36,6 +36,9 @@ import org.apache.sling.distribution.service.QueuePackages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
@@ -52,7 +55,10 @@ public class QueuesResource {
     private DistributionQueueInfo queueProd;
     private DistributionQueueInfo queueStage;
 
-    public QueuesResource() {
+    private Counter queuesCounter;
+
+    public QueuesResource(MetricRegistry metricRegistry) {
+        queuesCounter = metricRegistry.counter("getQueues");
     }
     
 
@@ -60,6 +66,7 @@ public class QueuesResource {
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description =  "List available queues")
     public Environment getQueues() {
+        queuesCounter.inc();
         queueProd = createQueue("stage").build();
         queueStage = createQueue("prod").build();
         queues = Map.of(
