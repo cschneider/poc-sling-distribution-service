@@ -46,6 +46,9 @@ import org.eclipse.microprofile.metrics.annotation.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
@@ -62,7 +65,10 @@ public class QueuesResource {
     private DistributionQueueInfo queueProd;
     private DistributionQueueInfo queueStage;
 
-    public QueuesResource() {
+    private Counter queuesCounter;
+
+    public QueuesResource(MetricRegistry metricRegistry) {
+        queuesCounter = metricRegistry.counter("getQueues");
     }
 
 //    @Inject
@@ -85,7 +91,7 @@ public class QueuesResource {
     @Counted(name = "getQueues_count", absolute = true)
     @Metered(name = "getQueues_meter", absolute = true)
     public Environment getQueues() {
-        histogram.update(System.currentTimeMillis());
+        queuesCounter.inc();
         queueProd = createQueue("stage").build();
         queueStage = createQueue("prod").build();
         queues = new HashMap<String, DistributionQueueInfo>() {{
