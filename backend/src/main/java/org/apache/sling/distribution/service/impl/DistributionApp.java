@@ -1,5 +1,7 @@
 package org.apache.sling.distribution.service.impl;
 
+import org.apache.sling.distribution.journal.MessagingProvider;
+
 import java.util.Set;
 
 import javax.ws.rs.core.Application;
@@ -20,10 +22,12 @@ public class DistributionApp extends Application {
 
     @Reference
     MetricRegistry metricRegistry;
+    @Reference
+    MessagingProvider messagingProvider;
     
     @Override
     public Set<Object> getSingletons() {
-        QueuesResource queuesResource = new QueuesResource(metricRegistry);
+        QueuesResource queuesResource = new QueuesResource(metricRegistry, messagingProvider);
         StatusResource statusResource = new StatusResource();
         DiscoveryResource discoveryResource = new DiscoveryResource();
         BinaryResource binaryResource = new BinaryResource();

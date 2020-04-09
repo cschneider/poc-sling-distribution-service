@@ -1,13 +1,16 @@
 package org.apache.sling.distribution.service.impl;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import org.apache.commons.io.IOUtils;
+import org.apache.sling.distribution.journal.MessagingProvider;
+import org.apache.sling.distribution.service.DistributionEvent;
+import org.apache.sling.distribution.service.DistributionQueueInfo;
+import org.apache.sling.distribution.service.DistributionQueueInfo.DistributionQueueInfoBuilder;
+import org.apache.sling.distribution.service.Environment;
+import org.apache.sling.distribution.service.PackageMessageMeta;
+import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
+import org.apache.sling.distribution.service.QueuePackages;
+import org.apache.sling.distribution.service.impl.core.ReplicationService;
+import org.apache.sling.distribution.service.impl.core.legacy.LegacyBackendAgent;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -24,23 +27,21 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.sling.distribution.service.DistributionEvent;
-import org.apache.sling.distribution.service.DistributionQueueInfo;
-import org.apache.sling.distribution.service.DistributionQueueInfo.DistributionQueueInfoBuilder;
-import org.apache.sling.distribution.service.Environment;
-import org.apache.sling.distribution.service.PackageMessageMeta;
-import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
-import org.apache.sling.distribution.service.QueuePackages;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("queues")
 public class QueuesResource {
@@ -50,15 +51,17 @@ public class QueuesResource {
 
     @Context 
     private UriInfo uriInfo;
-    
+
     private Map<String, DistributionQueueInfo> queues;
     private DistributionQueueInfo queueProd;
     private DistributionQueueInfo queueStage;
 
     private Counter queuesCounter;
+    private final ReplicationService client;
 
-    public QueuesResource(MetricRegistry metricRegistry) {
+    public QueuesResource(MetricRegistry metricRegistry, MessagingProvider messagingProvider) {
         queuesCounter = metricRegistry.counter("getQueues");
+        this.client = new ReplicationService(new LegacyBackendAgent(messagingProvider));
     }
     
 
@@ -145,7 +148,7 @@ public class QueuesResource {
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description = "Get meta data of a single package")
     public PackageMessageMeta getPackageMeta(@PathParam("queueId") String queueId, @PathParam("position") long position) {
-        return getPackage(queueId, position, true);
+        return client.getPackageMeta(String.valueOf(position));
     }
 
     @GET
