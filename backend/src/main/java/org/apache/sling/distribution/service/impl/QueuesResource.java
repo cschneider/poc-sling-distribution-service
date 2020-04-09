@@ -5,9 +5,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -21,6 +21,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
@@ -31,8 +32,8 @@ import org.apache.sling.distribution.service.DistributionQueueInfo;
 import org.apache.sling.distribution.service.DistributionQueueInfo.DistributionQueueInfoBuilder;
 import org.apache.sling.distribution.service.Environment;
 import org.apache.sling.distribution.service.PackageMessageMeta;
-import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
 import org.apache.sling.distribution.service.QueuePackages;
+import org.apache.sling.distribution.service.impl.subcriber.PackageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,9 +56,11 @@ public class QueuesResource {
     private DistributionQueueInfo queueProd;
     private DistributionQueueInfo queueStage;
 
-    private Counter queuesCounter;
+    private final PackageRepository repository;
+    private final Counter queuesCounter;
 
-    public QueuesResource(MetricRegistry metricRegistry) {
+    public QueuesResource(MetricRegistry metricRegistry, PackageRepository repository) {
+        this.repository = repository;
         queuesCounter = metricRegistry.counter("getQueues");
     }
     
@@ -106,14 +109,12 @@ public class QueuesResource {
     public QueuePackages getQueueMessages(
             @PathParam("queueId") String queueId, 
             @Parameter(allowEmptyValue = true, description = "Position to start from. If emtpy starts from position of oldest package.")
-            @QueryParam("position") String position, 
+            @QueryParam("position") long position, 
             @Parameter(description = "Maximum number of packages to return. -1 will fetch all.")
-            @QueryParam("limit") long limit,
+            @QueryParam("limit") Integer limit,
             @Parameter(description = "Get only packages that are appliedBy by the named subscriber")
             @QueryParam("appliedBy") String appliedBy) {
-        List<PackageMessageMeta> packages = Arrays.asList(
-                getPackage(queueId, 1000, false), 
-                getPackage(queueId, 1001, false));
+        List<PackageMessageMeta> packages = repository.getPackages(queueId, position, limit);
         Link messagesLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
         Link queueLink = Link.fromUriBuilder(queueUri(queueId)).build();
 
@@ -126,7 +127,7 @@ public class QueuesResource {
     @DELETE
     @Path("{queueId}")
     @Operation(description = "Delete a number of packages starting with oldest")
-    public void postDistributionPackage(
+    public void deleteDistributionPackage(
             @QueryParam("limit") long limit
             ) throws IOException {
         log.info("Deleting {} packages", limit);
@@ -137,22 +138,23 @@ public class QueuesResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(description = "Upload and distribute a content package")
     public void postDistributionPackage(PackageMessageMeta pkgMeta) throws IOException {
-        System.out.println(pkgMeta);
+        repository.publish(pkgMeta);
     }
     
     @GET
-    @Path("{queueId}/messages/{position}")
+    @Path("{queueId}/packages/{position}")
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description = "Get meta data of a single package")
-    public PackageMessageMeta getPackageMeta(@PathParam("queueId") String queueId, @PathParam("position") long position) {
-        return getPackage(queueId, position, true);
+    public Response getPackageMeta(@PathParam("queueId") String queueId, @PathParam("position") Long position) {
+        Optional<PackageMessageMeta> pkg = repository.getPackage(queueId, position);
+        return pkg.isPresent() ? Response.ok(pkg.get()).build() : Response.status(404).build();
     }
 
     @GET
     @Path("{queueId}/messages/{position}.zip")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     @Operation(description = "Get content of a package")
-    public StreamingOutput getPackageContent(@PathParam("queueId") String queueId, @PathParam("position") long position) {
+    public StreamingOutput getPackageContent(@PathParam("queueId") String queueId, @PathParam("position") Long position) {
         return new StreamingOutput() {
 
             @Override
@@ -180,31 +182,6 @@ public class QueuesResource {
                 .offset(1000)
                 .packageId("pkg1000")
                 .build());
-    }
-
-    private PackageMessageMeta getPackage(String queueId, long position, boolean showQueueLink) {
-        String pkgId = "pk" + position;
-        Link binaryLink = Link.fromUriBuilder(queuePackgesUri(queueId).path(position + ".zip")).build();
-        Link selfLink = Link.fromUriBuilder(queuePackgesUri(queueId).path("" + position)).build();
-        Link queueLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
-        Map<String, Link> links = showQueueLink ? Map.of(
-                "self", selfLink,
-                "contentPackage", binaryLink,
-                "queue", queueLink)
-        : Map.of("self", selfLink, "binary", binaryLink);
-        PackageMessageMeta package1 = PackageMessageMeta.builder()
-                .pkgId(pkgId)
-                .position(position)
-                .pubSlingId("pubSlingId")
-                .pubAgentName("pubAgentName")
-                .reqType(ReqType.ADD)
-                .pkgType("pkgType")
-                .links(links)
-                .userId("userId")
-                .paths(Collections.singletonList("/test"))
-                .deepPaths(Collections.emptyList())
-                .build();
-        return package1;
     }
 
     private UriBuilder queuePackgesUri(String queueId) {

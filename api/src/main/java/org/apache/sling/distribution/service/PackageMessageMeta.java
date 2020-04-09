@@ -27,10 +27,14 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @XmlRootElement
+@NoArgsConstructor
+@AllArgsConstructor
 @Data
 @Builder
 public class PackageMessageMeta {

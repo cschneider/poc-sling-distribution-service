@@ -13,6 +13,9 @@
         "tags" : ["systemready"]
     },
 
+    "org.apache.sling.distribution.journal.kafka.KafkaClientProvider": {
+
+    },
 
     "org.apache.aries.jax.rs.whiteboard.default": {
       "default.web": false

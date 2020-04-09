@@ -4,6 +4,7 @@ import java.util.Set;
 
 import javax.ws.rs.core.Application;
 
+import org.apache.sling.distribution.service.impl.subcriber.PackageRepository;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.jaxrs.whiteboard.propertytypes.JaxrsApplicationBase;
@@ -21,9 +22,12 @@ public class DistributionApp extends Application {
     @Reference
     MetricRegistry metricRegistry;
     
+    @Reference
+    PackageRepository repository;
+    
     @Override
     public Set<Object> getSingletons() {
-        QueuesResource queuesResource = new QueuesResource(metricRegistry);
+        QueuesResource queuesResource = new QueuesResource(metricRegistry, repository);
         StatusResource statusResource = new StatusResource();
         DiscoveryResource discoveryResource = new DiscoveryResource();
         BinaryResource binaryResource = new BinaryResource();

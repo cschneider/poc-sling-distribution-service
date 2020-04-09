@@ -16,6 +16,11 @@
             <artifactId>org.apache.sling.distribution.service.api</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.distribution.journal.messages</artifactId>
+            <version>0.1.2</version>
+        </dependency>
         <!-- Need older version for compatibility with sling commons metrics -->
 
         <dependency>

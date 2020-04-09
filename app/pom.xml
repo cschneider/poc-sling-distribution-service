@@ -11,6 +11,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.distribution.journal.kafka</artifactId>
+            <version>0.1.4</version>
+        </dependency>
+        <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>swagger-ui</artifactId>
             <version>3.13.0</version>
