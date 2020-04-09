@@ -35,9 +35,11 @@ import org.apache.sling.distribution.service.Environment;
 import org.apache.sling.distribution.service.PackageMessageMeta;
 import org.apache.sling.distribution.service.PackageMessageMeta.ReqType;
 import org.apache.sling.distribution.service.QueuePackages;
+import org.apache.sling.distribution.service.impl.core.ReplicationService;
+import org.apache.sling.distribution.service.impl.core.legacy.LegacyBackendAgent;
 
+import com.adobe.granite.distribution.mongo.MongoMessagingProvider;
 import org.eclipse.microprofile.metrics.Histogram;
-import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.annotation.Counted;
 import org.eclipse.microprofile.metrics.annotation.Metered;
 import org.eclipse.microprofile.metrics.annotation.Metric;
@@ -69,6 +71,13 @@ public class QueuesResource {
     @Inject
     @Metric(name = "akrainiouk", absolute = true)
     public Histogram histogram;
+
+    private final ReplicationService client = new ReplicationService(
+            new LegacyBackendAgent(new MongoMessagingProvider(
+                    "mongodb://localhost:27017/replication_db",
+                    1000L * 3600 * 24 * 7
+            ))
+    );
 
     @GET
     @Produces(APPLICATION_HAL_JSON)
@@ -160,7 +169,7 @@ public class QueuesResource {
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description = "Get meta data of a single package")
     public PackageMessageMeta getPackageMeta(@PathParam("queueId") String queueId, @PathParam("position") long position) {
-        return getPackage(queueId, position, true);
+        return client.getPackageMeta(String.valueOf(position));
     }
 
     @GET
