@@ -95,7 +95,7 @@ abstract class AbstractJournalAgent<Message, BackendMessage extends GeneratedMes
     @Override
     public void close() {
         for (var e : subscribers.entrySet()) {
-            var subsctiber = e.getKey();
+            var subscriber = e.getKey();
             var poller = e.getValue();
             IOUtils.closeQuietly(poller);
         }

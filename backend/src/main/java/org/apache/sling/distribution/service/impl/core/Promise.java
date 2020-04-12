@@ -19,7 +19,10 @@
 
 package org.apache.sling.distribution.service.impl.core;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.SneakyThrows;

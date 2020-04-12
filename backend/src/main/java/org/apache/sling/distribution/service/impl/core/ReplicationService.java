@@ -21,6 +21,8 @@ package org.apache.sling.distribution.service.impl.core;
 
 import org.apache.sling.distribution.service.PackageMessageMeta;
 
+import java.util.Optional;
+
 /** Represents replication service as whole. Uses backend storage
  * (journal) is represented by BackendAgent instance. In our case
  * it is just an adapter to MessagingService
@@ -29,7 +31,7 @@ import org.apache.sling.distribution.service.PackageMessageMeta;
 public class ReplicationService<K> {
 
     private static final String TOPIC_PACKAGE = "aemdistribution_package";
-    private static final long ABANDON_TIMEOUT = 1000 * 600; // 10min
+    private static final long ABANDON_TIMEOUT = 1000 * 60; // 1min
     private static final int TRACKING_HISTORY_LENGTH = 10;
 
     public ReplicationService(BackendAgent<K> backendAgent) {
@@ -43,7 +45,7 @@ public class ReplicationService<K> {
     /** returns a message at the specified position
      * either from cache or fetching and waiting when necessary
      * @param position position from which to retrieve a message
-     * @return fetched or cache message instance
+     * @return fetched or cached message instance
      */
     public PackageMessageMeta getPackageMeta(K position) {
         return packageReader.getMessage(position);

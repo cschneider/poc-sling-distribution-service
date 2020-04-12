@@ -37,8 +37,8 @@ class TopicReader<K, V> {
     V getMessage(K position) {
         Promise<K, V> promise;
         synchronized (packageFetchers) {
-            promise = existingPromise(position).orElseGet(() ->
-                    newPromise(position)
+            promise = cache.get(position).orElseGet(
+                    () -> newPromise(position)
             );
         }
         return promise.getValue();
@@ -62,6 +62,13 @@ class TopicReader<K, V> {
     private final long abandonTimeout;
     private final int usageHistoryLength;
 
+    private void unregisterFetcher(MessageFetcher<K, V> fetcher) {
+        synchronized (packageFetchers) {
+            journalAgent.unsubscribe(fetcher);
+            packageFetchers.remove(fetcher);
+        }
+    }
+
     private Optional<Promise<K, V>> existingPromise(K position) {
         for (var fetcher : packageFetchers) {
             var maybePromise = fetcher.subscribe(position);
@@ -73,12 +80,15 @@ class TopicReader<K, V> {
     }
 
     private Promise<K, V> newPromise(K position) {
-        var fetcher = new MessageFetcher<K, V>(journalAgent, cache, abandonTimeout,
+        var fetcher = new MessageFetcher<>(
+                this::unregisterFetcher,
+                cache,
+                abandonTimeout,
                 usageHistoryLength
         );
-        packageFetchers.add(fetcher);
         var promise = fetcher.start(position);
-//        journalAgent.subscribe(position, fetcher);
+        packageFetchers.add(fetcher);
+        journalAgent.subscribe(position, fetcher);
         return promise;
     }
 

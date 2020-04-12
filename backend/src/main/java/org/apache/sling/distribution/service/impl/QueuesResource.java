@@ -66,9 +66,20 @@ public class QueuesResource {
     private DistributionQueueInfo queueStage;
 
     private Counter queuesCounter;
+    private final ReplicationService<String> replicationService;
+
+    public QueuesResource() {
+        queuesCounter = new Counter();
+        replicationService = new ReplicationService<>(
+                new LegacyBackendAgent(
+                        new MongoMessagingProvider("mongodb://localhost", 10)
+                )
+        );
+    }
 
     public QueuesResource(MetricRegistry metricRegistry) {
         queuesCounter = metricRegistry.counter("getQueues");
+        replicationService = null;
     }
 
 //    @Inject

@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +38,8 @@ import static org.apache.sling.distribution.service.impl.core.MessageFetcher.Sta
 
 class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
 
-    MessageFetcher(JournalAgent<K, V> agent, PromiseCache<K, V> cache, long timeout, int maxTracked) {
-        this.agent = agent;
+    MessageFetcher(Consumer<MessageFetcher<K, V>> unregister, PromiseCache<K, V> cache, long timeout, int maxTracked) {
+        this.unregister = unregister;
         this.cache = cache;
         this.timeout = timeout;
         this.lastUsedTracker = new LastUsedTracker(maxTracked);
@@ -54,7 +55,6 @@ class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
             requestedRef.set(promise);
             trackUsage(promise);
             lastUsed.set(currentTimeMillis());
-            agent.subscribe(key, this);
             return promise;
         } else {
             throw new IllegalStateException(format("[%s] is already being handled", cachedPromise));
@@ -80,7 +80,7 @@ class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
             if (cached != null) {
                 LOGGER.info("{}: Caught up with cache at {}. Stopping.", this, next);
                 requestedRef.set(null);
-                agent.unsubscribe(this);
+                unregister.accept(this);
                 state.set(CAUGHT_UP);
             }
         } else {
@@ -90,7 +90,7 @@ class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
 
     @Override
     public void close() {
-        agent.unsubscribe(this);
+        unregister.accept(this);
         state.set(STOPPED);
     }
 
@@ -98,9 +98,9 @@ class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
     public String toString() {
         var state = this.state.get();
         if (state == FETCHING) {
-            return format("[%s]([%s]) at [%s]", agent, state, requestedRef.get());
+            return format("[%s] at [%s]", state, requestedRef.get());
         } else {
-            return format("[%s]([%s])", agent, state);
+            return format("[%s]", state);
         }
     }
 
@@ -114,9 +114,9 @@ class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
     private final AtomicReference<State> state = new AtomicReference<>(NEW);
     private final AtomicReference<Promise<K, V>> requestedRef = new AtomicReference<>();
     private final PromiseCache<K, V> cache;
-    private final JournalAgent<K, V> agent;
     private final long timeout;
     private final LastUsedTracker lastUsedTracker;
+    private final Consumer<MessageFetcher<K, V>> unregister;
 
     private void trackUsage(Promise<K, V> promise) {
         lastUsedTracker.push(promise);
@@ -126,7 +126,8 @@ class MessageFetcher<K, V> implements BiConsumer<K, V>, AutoCloseable {
                     "{} was not utilized since {} which exceeds timout of {} sec. Abandoning",
                     this, lastUsed, timeout / 1000
             );
-            agent.unsubscribe(this);
+
+            unregister.accept(this);
             state.set(ABANDONED);
         }
     }
