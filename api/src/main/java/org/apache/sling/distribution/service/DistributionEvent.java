@@ -19,12 +19,9 @@
 
 package org.apache.sling.distribution.service;
 
-import javax.xml.bind.annotation.XmlRootElement;
-
 import lombok.Builder;
 import lombok.Data;
 
-@XmlRootElement
 @Data
 @Builder
 public class DistributionEvent {

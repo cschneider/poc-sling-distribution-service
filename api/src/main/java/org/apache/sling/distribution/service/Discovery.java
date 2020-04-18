@@ -21,12 +21,9 @@ package org.apache.sling.distribution.service;
 
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlRootElement;
-
 import lombok.Builder;
 import lombok.Data;
 
-@XmlRootElement
 @Data
 @Builder
 public class Discovery {

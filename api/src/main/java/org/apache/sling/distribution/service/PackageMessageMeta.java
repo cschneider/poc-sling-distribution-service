@@ -22,15 +22,9 @@ package org.apache.sling.distribution.service;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.core.Link;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-
 import lombok.Builder;
 import lombok.Data;
 
-@XmlRootElement
 @Data
 @Builder
 public class PackageMessageMeta {
@@ -44,10 +38,6 @@ public class PackageMessageMeta {
     List<String> paths;
     List<String> deepPaths;
     String pkgType;
-    
-    @XmlJavaTypeAdapter(Link.JaxbAdapter.class)
-    @XmlElement(name = "_links")
-    Map<String, Link> links;
 
     public enum ReqType {
         ADD, DELETE, TEST
