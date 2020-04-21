@@ -1,13 +1,11 @@
 package org.apache.sling.distribution.service.impl;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -17,23 +15,26 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Link;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.sling.distribution.service.DistributionEvent;
 import org.apache.sling.distribution.service.DistributionQueueInfo;
 import org.apache.sling.distribution.service.DistributionQueueInfo.DistributionQueueInfoBuilder;
-import org.apache.sling.distribution.service.Environment;
+import org.apache.sling.distribution.service.Domain;
+import org.apache.sling.distribution.service.Organization;
 import org.apache.sling.distribution.service.PackageMessageMeta;
 import org.apache.sling.distribution.service.QueuePackages;
-import org.apache.sling.distribution.service.impl.subcriber.PackageRepository;
+import org.apache.sling.distribution.service.impl.publisher.DistributionPublisher;
+import org.apache.sling.distribution.service.impl.subscriber.DomainCache;
+import org.apache.sling.distribution.service.impl.subscriber.OrgCache;
+import org.apache.sling.distribution.service.impl.subscriber.PackageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,70 +44,79 @@ import com.codahale.metrics.MetricRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
-@Path("queues")
+@Path("domains")
 public class QueuesResource {
-    private static final String APPLICATION_HAL_JSON = "application/hal+json";
+    static final String HEADER_IMS_ORG = "x-gw-ims-org-id";
+    static final String APPLICATION_HAL_JSON = "application/hal+json";
     
     private Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Context 
     private UriInfo uriInfo;
     
-    private Map<String, DistributionQueueInfo> queues;
-    private DistributionQueueInfo queueProd;
-    private DistributionQueueInfo queueStage;
-
+    @Context 
+    private HttpHeaders headers;
+    
+    private final DistributionPublisher publisher;
     private final PackageRepository repository;
     private final Counter queuesCounter;
 
-    public QueuesResource(MetricRegistry metricRegistry, PackageRepository repository) {
+    public QueuesResource(MetricRegistry metricRegistry, DistributionPublisher publisher, PackageRepository repository) {
+        this.publisher = publisher;
         this.repository = repository;
-        queuesCounter = metricRegistry.counter("getQueues");
+        this.queuesCounter = metricRegistry.counter("getQueues");
     }
     
+    
+    @GET
+    @Path("")
+    @Produces(APPLICATION_HAL_JSON)
+    @Operation(description =  "List available replication domains of this IMS Org")
+    public Organization getDomains() {
+        String imsOrg = getImsOrg();
+        OrgCache orgCache = repository.getOrg(imsOrg);
+        return orgCache.self(uriInfo.getAbsolutePathBuilder());
+    }
 
     @GET
+    @Path("{domainId}")
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description =  "List available queues")
-    public Environment getQueues() {
+    public Domain getDomain(
+            @PathParam("domainId") String domainId) {
         queuesCounter.inc();
-        queueProd = createQueue("stage").build();
-        queueStage = createQueue("prod").build();
-        queues = Map.of(
-                "stage", queueStage,
-                "prod", queueProd);
-        Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
-        Map<String, Link> links = Map.of("self", selfLink);
-        return Environment.builder()
-                    .queues(queues)
-                    .links(links)
-                    .build();
+        String imsOrg = getImsOrg();
+        OrgCache orgCache = repository.getOrg(imsOrg);
+        DomainCache domain = orgCache.getDomain(domainId);
+        return domain.self(uriInfo.getAbsolutePathBuilder());
     }
     
     @GET
-    @Path("{queueId}")
+    @Path("{domainId}/queues/{queueId}")
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description = "Get queue info")
     public DistributionQueueInfo getQueueInfo(
+            @PathParam("domainId") String domain,
             @PathParam("queueId") String queueId) {
-        Link envLink = Link.fromUriBuilder(uriInfo.getBaseUriBuilder().path(QueuesResource.class)).build();
-        Link selfLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
-        Link packagesLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
-        Link eventsLink = Link.fromUriBuilder(queueUri(queueId).path("events")).build();
+        Link domainLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder().path("..")).build();
+        Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
+        Link packagesLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder().path("packages")).build();
+        Link eventsLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder().path("events")).build();
 
         Map<String, Link> links = Map.of(
                 "self", selfLink,
                 "packages", packagesLink,
                 "events", eventsLink,
-                "env", envLink);
-        return createQueue(queueId).links(links).build();
+                "domain", domainLink);
+        return createQueue(queueId, uriInfo.getAbsolutePathBuilder()).links(links).build();
     }
 
     @GET
-    @Path("{queueId}/packages")
+    @Path("{domainId}/queues/{queueId}/packages")
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description =  "Get queue contents. Paged view")
-    public QueuePackages getQueueMessages(
+    public QueuePackages getQueuePackages(
+            @PathParam("domainId") String domainId,
             @PathParam("queueId") String queueId, 
             @Parameter(allowEmptyValue = true, description = "Position to start from. If emtpy starts from position of oldest package.")
             @QueryParam("position") long position, 
@@ -114,61 +124,59 @@ public class QueuesResource {
             @QueryParam("limit") Integer limit,
             @Parameter(description = "Get only packages that are appliedBy by the named subscriber")
             @QueryParam("appliedBy") String appliedBy) {
-        List<PackageMessageMeta> packages = repository.getPackages(queueId, position, limit);
-        Link messagesLink = Link.fromUriBuilder(queuePackgesUri(queueId)).build();
-        Link queueLink = Link.fromUriBuilder(queueUri(queueId)).build();
+        long effectiveLimit = limit == null ? Long.MAX_VALUE : limit;
+        String imsOrg = getImsOrg();
+        List<PackageMessageMeta> packages = repository.getOrg(imsOrg).getDomain(domainId).getQueue(queueId).packagesFrom(position)
+                .limit(effectiveLimit).collect(Collectors.toList());
+        Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
+        Link queueLink = Link.fromUriBuilder(queueUri(domainId, queueId)).build();
 
         Map<String, Link> links = Map.of(
-                "self", messagesLink,
+                "self", selfLink,
                 "queue", queueLink);
         return QueuePackages.builder().packages(packages).links(links).build();
     }
     
     @DELETE
-    @Path("{queueId}")
-    @Operation(description = "Delete a number of packages starting with oldest")
+    @Path("{domainId}/queues/{queueId}")
+    @Operation(description = "Delete a number of packages starting with oldest. By default one package is deleted.")
     public void deleteDistributionPackage(
+            @PathParam("domainId") String domainId,
+            @PathParam("queueId") String queueId,
             @QueryParam("limit") long limit
             ) throws IOException {
         log.info("Deleting {} packages", limit);
     }
     
     @POST
-    @Path("{queueId}")
+    @Path("{domainId}/queues/{queueId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(description = "Upload and distribute a content package")
-    public void postDistributionPackage(PackageMessageMeta pkgMeta) throws IOException {
-        repository.publish(pkgMeta);
+    public void publishPackage(
+            @PathParam("domainId") String domainId,
+            @PathParam("queueId") String queueId,
+            PackageMessageMeta pkgMeta) throws IOException {
+        publisher.publish(pkgMeta);
     }
     
     @GET
-    @Path("{queueId}/packages/{position}")
+    @Path("{domainId}/queues/{queueId}/packages/{position}")
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description = "Get meta data of a single package")
-    public Response getPackageMeta(@PathParam("queueId") String queueId, @PathParam("position") Long position) {
-        Optional<PackageMessageMeta> pkg = repository.getPackage(queueId, position);
-        return pkg.isPresent() ? Response.ok(pkg.get()).build() : Response.status(404).build();
+    public Response getPackageMeta(
+            @PathParam("domainId") String domainId,
+            @PathParam("queueId") String queueId,
+            @PathParam("position") Long position) {
+        String imsOrg = getImsOrg();
+        Optional<PackageMessageMeta> pkg = repository.getOrg(imsOrg).getDomain(domainId).getQueue(queueId).packagesFrom(position).findFirst();
+        boolean found = pkg.isPresent() && pkg.get().getPubAgentName().equals(queueId);
+        return found 
+                ? Response.ok(pkg.get()).build() 
+                : Response.status(404).build();
     }
 
     @GET
-    @Path("{queueId}/messages/{position}.zip")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    @Operation(description = "Get content of a package")
-    public StreamingOutput getPackageContent(@PathParam("queueId") String queueId, @PathParam("position") Long position) {
-        return new StreamingOutput() {
-
-            @Override
-            public void write(OutputStream output) throws IOException, WebApplicationException {
-                File packageFile = new File("content-package.zip");
-                FileInputStream is = new FileInputStream(packageFile);
-                IOUtils.copy(is, output);
-                output.close();
-                is.close();
-            }};
-    }
-    
-    @GET
-    @Path("{queueId}/events")
+    @Path("{domainId}/queues/{queueId}/events")
     @Produces(APPLICATION_HAL_JSON)
     @Operation(description = "Get distribution events. Paged view")
     public List<DistributionEvent> getEvents(
@@ -184,19 +192,27 @@ public class QueuesResource {
                 .build());
     }
 
-    private UriBuilder queuePackgesUri(String queueId) {
-        return queueUri(queueId).path("packages");
-    }
-    
-    private UriBuilder queueUri(String queueId) {
-        return uriInfo.getBaseUriBuilder().path(QueuesResource.class).path(queueId);
+    private String getImsOrg() {
+        String orgFromHeader = headers.getHeaderString(HEADER_IMS_ORG);
+        if (orgFromHeader != null) {
+            return orgFromHeader;
+        }
+        Cookie cookie = headers.getCookies().get(HEADER_IMS_ORG);
+        if (cookie == null) {
+            throw new RuntimeException("Must set header or cookie " + HEADER_IMS_ORG);
+        }
+        return cookie.getValue();
     }
 
-    private DistributionQueueInfoBuilder createQueue(String queueId) {
-        Link link = Link.fromUriBuilder(queueUri(queueId)).build();
+
+    private UriBuilder queueUri(String domainId, String queueId) {
+        return uriInfo.getBaseUriBuilder().path(QueuesResource.class).path(domainId).path("queues").path(queueId);
+    }
+
+    private DistributionQueueInfoBuilder createQueue(String queueId, UriBuilder selfUri) {
+        Link selfLink = Link.fromUriBuilder(selfUri).build();
         return DistributionQueueInfo.builder()
                 .id(queueId)
-                .size(20)
-                .links(Map.of("self", link));
+                .links(Map.of("self", selfLink));
     }
 }

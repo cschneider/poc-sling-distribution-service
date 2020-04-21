@@ -17,25 +17,40 @@
  *     under the License.
  */
 
-package org.apache.sling.distribution.service.impl.subcriber;
+package org.apache.sling.distribution.service.impl.journal;
+
+import java.io.IOException;
+import java.util.Map;
+
+import javax.ws.rs.core.Link;
 
 import org.apache.sling.distribution.journal.MessageInfo;
 import org.apache.sling.distribution.journal.messages.Messages;
 import org.apache.sling.distribution.service.PackageMessageMeta;
+import org.apache.sling.distribution.service.impl.BinaryResource;
+import org.apache.sling.distribution.service.impl.binary.BinaryRepository;
+
+import com.google.protobuf.ByteString;
 
 class PackageMessageMetaConverter {
 
-    static PackageMessageMeta convert(MessageInfo info, Messages.PackageMessage message) {
+    static PackageMessageMeta convert(MessageInfo info, Messages.PackageMessage message, BinaryRepository repository) throws IOException {
+        ByteString pkgBinary = message.getPkgBinary();
+        String id = repository.upload(pkgBinary.newInput());
+        Link packageLink = Link.fromResource(BinaryResource.class).param("id", id).build();
         return PackageMessageMeta.builder()
                                  .pkgId(message.getPkgId())
                                  .pkgType(message.getPkgType())
                                  .reqType(convert(message.getReqType()))
+                                 .imsOrg(info.getOrg())
+                                 .source(info.getSource())
                                  .userId(message.getUserId())
                                  .pubAgentName(message.getPubAgentName())
                                  .paths(message.getPathsList())
                                  .deepPaths(message.getDeepPathsList())
                                  .position(info.getOffset())
                                  .pubSlingId(message.getPubSlingId())
+                                 .links(Map.of("package", packageLink))
                                  .build();
     }
 

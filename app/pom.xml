@@ -10,10 +10,12 @@
     <artifactId>org.apache.sling.distribution.service.app</artifactId>
 
     <dependencies>
+        <!-- <dependency> <groupId>org.apache.sling</groupId> <artifactId>org.apache.sling.distribution.journal.kafka</artifactId> 
+            <version>0.1.4</version> </dependency> -->
         <dependency>
-            <groupId>org.apache.sling</groupId>
-            <artifactId>org.apache.sling.distribution.journal.kafka</artifactId>
-            <version>0.1.4</version>
+            <groupId>com.adobe.granite</groupId>
+            <artifactId>com.adobe.granite.distribution.journal.pipeline</artifactId>
+            <version>0.0.21-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.webjars</groupId>

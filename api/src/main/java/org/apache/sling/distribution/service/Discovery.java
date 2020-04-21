@@ -23,12 +23,16 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @XmlRootElement
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Discovery {
     String subSlingId;               // Subscriber agent Sling identifier
     String subAgentName;             // Subscriber agent name

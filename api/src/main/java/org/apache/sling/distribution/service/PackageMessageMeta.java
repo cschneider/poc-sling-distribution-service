@@ -42,6 +42,8 @@ public class PackageMessageMeta {
     String pkgId; // Content package identifier
     long position;
     ReqType reqType;
+    String imsOrg;
+    String source;
     String pubSlingId; // Publisher sling Id
     String pubAgentName; // Publisher agent name
     String userId;

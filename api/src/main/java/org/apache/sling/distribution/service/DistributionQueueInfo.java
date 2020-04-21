@@ -26,15 +26,18 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @XmlRootElement
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class DistributionQueueInfo {
     String id;
-    int size;
     
     @XmlJavaTypeAdapter(Link.JaxbAdapter.class)
     @XmlElement(name = "_links")

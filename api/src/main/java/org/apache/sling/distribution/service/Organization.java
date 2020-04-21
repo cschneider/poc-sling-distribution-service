@@ -16,7 +16,6 @@
  *     specific language governing permissions and limitations
  *     under the License.
  */
-
 package org.apache.sling.distribution.service;
 
 import java.util.List;
@@ -37,12 +36,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class QueuePackages {
+public class Organization {
     String id;
-    int size;
     
-    List<PackageMessageMeta> packages;
-    
+    List<Domain> domains;
+
     @XmlJavaTypeAdapter(Link.JaxbAdapter.class)
     @XmlElement(name = "_links")
     Map<String, Link> links;

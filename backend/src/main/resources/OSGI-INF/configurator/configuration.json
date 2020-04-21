@@ -17,6 +17,11 @@
 
     },
 
+    "com.adobe.granite.distribution.journal.pipeline.PipelineClientProvider": {
+        "endpoint":"http://localhost:8081",
+        "bearerToken":"secret"
+    },
+
     "org.apache.aries.jax.rs.whiteboard.default": {
       "default.web": false
     }

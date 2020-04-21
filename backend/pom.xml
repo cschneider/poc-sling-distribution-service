@@ -12,6 +12,11 @@
     <artifactId>org.apache.sling.distribution.service.backend</artifactId>
     <dependencies>
         <dependency>
+            <groupId>com.adobe.asr</groupId>
+            <artifactId>connector-ims</artifactId>
+            <version>7.37.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.distribution.service.api</artifactId>
             <version>1.0.0-SNAPSHOT</version>
@@ -19,7 +24,7 @@
         <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.distribution.journal.messages</artifactId>
-            <version>0.1.2</version>
+            <version>0.1.3-SNAPSHOT</version>
         </dependency>
         <!-- Need older version for compatibility with sling commons metrics -->
 
@@ -85,4 +90,36 @@
             <version>3.25.0</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.geronimo</groupId>
+                <artifactId>geronimo-openapi-maven-plugin</artifactId>
+                <version>1.0.11</version>
+                <executions>
+                    <execution>
+                        <id>generate-openapi.json</id>
+                        <goals>
+                            <goal>openapi.json</goal>
+                        </goals>
+                        <configuration>
+                            <application>org.apache.sling.distribution.service.impl.DistributionApp</application>
+                            <endpointClasses>
+                                <endpointClass>org.apache.sling.distribution.service.impl.QueuesResource</endpointClass>
+                                <endpointClass>org.apache.sling.distribution.service.impl.StatusResource</endpointClass>
+                                <endpointClass>org.apache.sling.distribution.service.impl.DiscoveryResource</endpointClass>
+                            </endpointClasses>
+                            <info>
+                                <version>1</version>
+                                <title>Content Distribution Service</title>
+                                <description>more</description>
+                            </info>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

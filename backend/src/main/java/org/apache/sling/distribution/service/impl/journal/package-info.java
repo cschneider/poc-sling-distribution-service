@@ -1,0 +1,1 @@
+package org.apache.sling.distribution.service.impl.journal;
