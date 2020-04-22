@@ -2,11 +2,15 @@ package org.apache.sling.distribution.service.impl.subscriber;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Stream;
 
+import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.Link;
 import javax.ws.rs.core.UriBuilder;
 
@@ -20,11 +24,13 @@ public class QueueCache implements Closeable {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
     
     private final NavigableMap<Long, PackageMessageMeta> packages;
+    private final NavigableMap<Long, Set<AsyncResponse>> listeners;
     private final String queueId;
 
     public QueueCache(String queueId) {
         this.queueId = queueId;
-        packages = new ConcurrentSkipListMap<>();
+        this.packages = new ConcurrentSkipListMap<>();
+        this.listeners = new ConcurrentSkipListMap<>();
     }
 
     public Stream<PackageMessageMeta> packagesFrom(long position) {
@@ -35,8 +41,18 @@ public class QueueCache implements Closeable {
         return packages.tailMap(position, false).values().stream();
     }
 
-    public void addPackage(PackageMessageMeta pkg) {
-        packages.put(pkg.getPosition(), pkg);
+    public synchronized void addPackage(PackageMessageMeta pkg) {
+        long position = pkg.getPosition();
+        packages.put(position, pkg);
+        listeners.headMap(position).entrySet()
+            .forEach(this::processListener);
+    }
+    
+    private void processListener(Entry<Long, Set<AsyncResponse>> listener) {
+        long position = listener.getKey();
+        PackageMessageMeta nextPackage = packages.ceilingEntry(position).getValue();
+        listener.getValue().stream()
+            .forEach(resp -> resp.resume(nextPackage));
     }
 
     public void close() throws IOException {
@@ -50,6 +66,16 @@ public class QueueCache implements Closeable {
                 .id(queueId)
                 .links(links)
                 .build();
+    }
+
+    public synchronized void register(long position, AsyncResponse response) {
+        Entry<Long, PackageMessageMeta> entry = packages.ceilingEntry(position);
+        if (entry != null) {
+            response.resume(entry.getValue());
+         } else {
+            Set<AsyncResponse> responses = listeners.computeIfAbsent(position, pos -> new HashSet<>());
+            responses.add(response);
+         }
     }
 
 }

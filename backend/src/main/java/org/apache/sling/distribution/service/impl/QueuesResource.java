@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.Consumes;
@@ -15,6 +16,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
@@ -110,7 +113,22 @@ public class QueuesResource {
                 "domain", domainLink);
         return createQueue(queueId, uriInfo.getAbsolutePathBuilder()).links(links).build();
     }
-
+    
+    @GET
+    @Path("{domainId}/queues/{queueId}/next/{position}")
+    public void getNext(
+            @PathParam("domainId") String domainId,
+            @PathParam("queueId") String queueId, 
+            @PathParam("position") long position, 
+            @Parameter(description = "Get only package appliedBy by the named subscriber")
+            @QueryParam("appliedBy") String appliedBy,
+            @Suspended final AsyncResponse response) {
+        String imsOrg = getImsOrg();
+        response.setTimeout(10, TimeUnit.SECONDS);
+        response.setTimeoutHandler(res -> res.cancel(10));
+        repository.getOrg(imsOrg).getDomain(domainId).getQueue(queueId).register(position, response);
+    }
+    
     @GET
     @Path("{domainId}/queues/{queueId}/packages")
     @Produces(APPLICATION_HAL_JSON)
@@ -130,7 +148,6 @@ public class QueuesResource {
                 .limit(effectiveLimit).collect(Collectors.toList());
         Link selfLink = Link.fromUriBuilder(uriInfo.getAbsolutePathBuilder()).build();
         Link queueLink = Link.fromUriBuilder(queueUri(domainId, queueId)).build();
-
         Map<String, Link> links = Map.of(
                 "self", selfLink,
                 "queue", queueLink);

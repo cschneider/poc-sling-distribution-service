@@ -42,6 +42,8 @@ public class Discovery {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SubscriberState {
         String pubAgentName; // Publisher agent name
         String offset;       // Last processed offset on the Subscriber agent
